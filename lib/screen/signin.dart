@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'home.dart';
+import 'package:tired/landing.dart';
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -9,145 +10,211 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  // Firebase Auth instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   // Sign-in function
   Future<void> _signIn() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
     try {
-      // Get email and password from controllers
-      String email = _emailController.text;
-      String password = _passwordController.text;
-
-      // Sign in with email and password
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
 
-      // If sign-in is successful
-      print("Signed in: ${userCredential.user!.email}");
+      if (!mounted) return;
 
-      // Navigate to the home screen or another screen
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()), // Replace with your next screen
+        MaterialPageRoute(builder: (context) => const ISTEApp()),
       );
-    } catch (e) {
-      // If sign-in fails
-      print("Error: $e");
+    } on FirebaseAuthException catch (e) {
+      String message = 'An error occurred';
+      if (e.code == 'user-not-found') {
+        message = 'No user found with this email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided.';
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-        color: Colors.blue,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Stack(
+    return Scaffold(
+      body:Container(
+        decoration: BoxDecoration(
+        gradient: LinearGradient(
+        colors: [Colors.blue, Colors.white], // Gradient colors
+        begin: Alignment.topLeft,            // Start point of gradient
+        end: Alignment.bottomRight,          // End point of gradient
+    ),
+    ),
+      child: SafeArea(
+        child: Stack(
+          children: [
+            Column(
               children: [
-                Column(children:[Container(
-                  padding: const EdgeInsets.only(left: 35, top: 130),
-                  child: const Text('Welcome to ISTE',
-                    textAlign: TextAlign.center,
+                const Padding(
+                  padding: EdgeInsets.only(top: 50),
+                  child: Text(
+                    'Welcome to ISTE',
                     style: TextStyle(
-                        fontFamily: 'Times New Roman',
-                        color: Colors.black,
-                        fontSize:40),
+                      fontFamily: 'Times New Roman',
+                      color: Colors.black,
+                      fontSize: 40,
+                    ),
                   ),
                 ),
-                  Container(
-                    child: Image.asset('assets/images/iste.png', width: 200,height:200,alignment: Alignment.centerRight,),
-                  ),]),
-                SingleChildScrollView(
-                    child:Container(
-                        padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.5, left: 35, right: 35),
-                        child: Column(
-                            children:[
-                              TextField(
-                                controller: _emailController,
-                                cursorColor: Colors.white,
-                                style: TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.email_outlined),
-                                    fillColor: Colors.white.withOpacity(0.3),
-                                    filled: true,
-                                    hoverColor: Colors.white.withOpacity(0.6),
-                                    hintText: 'Enter your Email', border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(100)
-                                ),
-                                ),
-                              ),
-                              SizedBox(
-                                height: 30,
-                              ),
-                              TextField(
-                                cursorColor: Colors.white,
-                                obscureText: true,
-                                style: TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.lock_outline),
-                                    fillColor: Colors.white.withOpacity(0.3),
-                                    filled: true,
-                                    hintText: 'Enter the password', border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(100)
-                                )
-                                ),
-                              ),
-                              SizedBox(
-                                height: 30,
-                              ),
-                              Container(
-
-                                  height: 40,
-                                  width: 150,
-                                  padding: EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amberAccent,          // Background color of the button
-                                    borderRadius: BorderRadius.circular(30),  // Curved edges (adjust the radius for more or less curve)
-                                  ),
-                                  child:ElevatedButton(onPressed: (){
-                                    _signIn();
-                                  },
-                                    style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.amberAccent
-    ),
-                                    child: Text(
-                                      'Log In',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize:15,
-                                      )),
-                                    )
-
-    ),
-
-
-
-                              SizedBox(
-                                height: 30,
-                              ),
-                              Container(
-                                child: Text(
-                                    'Log in with', style: TextStyle(
-                                  fontFamily: 'Times New Roman',
-                                    fontSize: 25
-                                )
-                                ),
-                              ),
-                              Container(
-                                child: Image.asset('assets/images/g.png', width: 50,height:50,alignment: Alignment.center,),
-                              )
-                            ]
-                        )
-                    )
-                )
-              ]
-          ),
-        )
+                Image.asset(
+                  'assets/images/iste.png',
+                  width: 200,
+                  height: 200,
+                ),
+              ],
+            ),
+            SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.5,
+                  left: 35,
+                  right: 35,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          fillColor: Colors.white.withOpacity(0.3),
+                          filled: true,
+                          hintText: 'Enter your Email',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 30),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          fillColor: Colors.white.withOpacity(0.3),
+                          filled: true,
+                          hintText: 'Enter the password',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 30),
+                      SizedBox(
+                        height: 40,
+                        width: 150,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _signIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amberAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(),
+                          )
+                              : const Text(
+                            'Log In',
+                            style: TextStyle(fontSize: 15),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      const Text(
+                        'Log in with',
+                        style: TextStyle(
+                          fontFamily: 'Times New Roman',
+                          fontSize: 25,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Image.asset(
+                          'assets/images/g.png',
+                          width: 50,
+                          height: 50,
+                        ),
+                        onPressed: () {
+                          // Implement Google Sign In
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      ),
     );
   }
 }
